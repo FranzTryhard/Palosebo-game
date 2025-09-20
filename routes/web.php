@@ -7,3 +7,6 @@ Route::get('/players', [GameController::class, 'getPlayers']);
 Route::post('/progress/{id}', [GameController::class, 'updateProgress']);
 Route::get('/winner', [GameController::class, 'checkWinner']);
 Route::view('/test', 'test');
+Route::get('/game', function () {
+    return view('game'); // this will load resources/views/game.blade.php
+});
