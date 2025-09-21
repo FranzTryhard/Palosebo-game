@@ -26,9 +26,13 @@ Players can enter their names, race against each other, and the fastest finish t
 
 Clone the repository and navigate into the project folder:
 
+
 ```bash
 git clone <your-repo-url>
 cd <your-project-folder>
+
+# Run XAMPP
+create a database and name it to palosebo-game
 
 # Install dependencies:
 
