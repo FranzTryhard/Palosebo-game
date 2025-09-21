@@ -1,4 +1,4 @@
-/* public/js/game.js — Advanced Palosebo frontend */
+/* public/js/game.js — Palosebo Game with Player Name Modal + Leaderboard + Change Players */ 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements
   const p1El = document.getElementById("player1");
@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const bamboo2 = document.getElementById("bamboo2");
   const startBtn = document.getElementById("startBtn");
   const restartBtn = document.getElementById("restartBtn");
+  const changePlayersBtn = document.getElementById("changePlayersBtn"); // 🔹 new
   const countdownEl = document.getElementById("countdown");
   const overlay = document.getElementById("overlay");
   const winnerPopup = document.getElementById("winnerPopup");
@@ -20,7 +21,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const mobileP2 = document.getElementById("mobileP2");
   const gameRoot = document.getElementById("game-root");
 
-  // config
+  // Modal for player names
+  const playerSetupModal = document.getElementById("playerSetupModal");
+  const playerForm = document.getElementById("playerForm");
+  const p1NameInput = document.getElementById("player1NameInput");
+  const p2NameInput = document.getElementById("player2NameInput");
+  const p1NameDisplay = document.getElementById("p1Name");
+  const p2NameDisplay = document.getElementById("p2Name");
+
+  // Leaderboard modal
+  const leaderboardBtn = document.getElementById("leaderboardBtn");
+  const leaderboardModal = document.getElementById("leaderboardModal");
+  const leaderboardTable = document.getElementById("leaderboardTable");
+  const closeLeaderboard = document.getElementById("closeLeaderboard");
+
+  // Config
   let pos1 = 0, pos2 = 0;
   const step = 30; // climb per press (px)
   const bambooHeight = Math.max(bamboo1.clientHeight, bamboo2.clientHeight);
@@ -28,13 +43,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let gameActive = false;
   let startTime = 0, timerInterval = null;
 
-  // confetti engine
+  // Confetti engine
   const confetti = initConfetti(confettiCanvas);
 
-  // Optional sound hooks (place wav/mp3 in public/sounds/)
-  const soundClimb = null; // new Audio('/sounds/climb.mp3');
-  const soundSlip = null; // new Audio('/sounds/slip.mp3');
-  const soundWin  = null; // new Audio('/sounds/win.mp3');
+  // Optional sounds
+  const soundClimb = null;
+  const soundSlip = null;
+  const soundWin  = null;
 
   // Reset state
   function resetGame() {
@@ -48,12 +63,11 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.style.display = "none";
   }
 
-  // Set bottom style
   function setBottom(el, px) {
     el.style.bottom = px + "px";
   }
 
-  // Start countdown then unlock controls
+  // Countdown
   function startCountdown() {
     overlay.style.display = "flex";
     countdownEl.style.display = "block";
@@ -68,7 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         clearInterval(id);
         countdownEl.textContent = "GO!";
-        // small scale pop
         countdownEl.style.transform = "scale(1.06)";
         setTimeout(() => {
           overlay.style.display = "none";
@@ -105,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${mm}:${ss}.${String(cs).padStart(2, "0")}`;
   }
 
-  // Progress bars (percent)
+  // Progress bars
   function updateProgressBars() {
     const pct1 = Math.min(100, Math.round((pos1 / finishLine) * 100));
     const pct2 = Math.min(100, Math.round((pos2 / finishLine) * 100));
@@ -113,30 +126,27 @@ document.addEventListener("DOMContentLoaded", () => {
     p2BarFill.style.width = pct2 + "%";
   }
 
-  // Climb function with slip mechanics
+  // Climb + slips
   function climbWithSlip(playerEl, currentPos) {
-    // quick climb feeling
     playerEl.classList.add("climb");
     setTimeout(() => playerEl.classList.remove("climb"), 160);
 
-    // play climb sound
     if (soundClimb) { soundClimb.currentTime = 0; soundClimb.play(); }
 
     let pos = currentPos + step;
     const progressPct = (pos / finishLine) * 100;
 
-    // mid slips (small)
+    // Small slip
     if (progressPct > 40 && progressPct < 80 && Math.random() < 0.20) {
       triggerSmallSlip(playerEl);
       pos = Math.max(0, pos - 40);
       if (soundSlip) { soundSlip.currentTime = 0; soundSlip.play(); }
     }
 
-    // big slip near finish: fall to ground (random)
+    // Big slip
     if (progressPct >= 80 && Math.random() < 0.35) {
       triggerBigSlip(playerEl);
       pos = 0;
-      // screen shake
       gameRoot.classList.add("shake");
       setTimeout(() => gameRoot.classList.remove("shake"), 600);
       if (soundSlip) { soundSlip.currentTime = 0; soundSlip.play(); }
@@ -151,24 +161,36 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function triggerBigSlip(el) {
-    // store current pos as CSS var for proper fall animation
     const cur = parseInt(getComputedStyle(el).bottom || "0", 10) || 0;
     el.style.setProperty("--pos", cur + "px");
     el.classList.add("big-slip");
     setTimeout(() => {
       el.classList.remove("big-slip");
-      setBottom(el, 0); // ensure bottom 0 after animation
+      setBottom(el, 0);
     }, 980);
   }
 
-  // Winner handling
+  // Winner (✅ now saves to DB)
   function declareWinner(name) {
     gameActive = false;
     stopTimer();
+
+    const rawSeconds = (performance.now() - startTime) / 1000;
+
+    // Save winner to DB
+    fetch("/leaderboard", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ player_name: name, time: rawSeconds.toFixed(2) })
+    });
+
     winnerText.innerHTML = `<strong>${name}</strong> wins! 🏆<br>Time: ${timerEl.textContent}`;
     winnerPopup.style.display = "block";
     overlay.style.display = "flex";
-    confetti.explode(); // confetti
+    confetti.explode();
     if (soundWin) { soundWin.play(); }
   }
 
@@ -177,36 +199,102 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.style.display = "none";
   });
 
-  // Input handlers
+  // Keyboard
   document.addEventListener("keydown", (ev) => {
     if (!gameActive) return;
     if (ev.key.toLowerCase() === "a") {
       pos1 = climbWithSlip(p1El, pos1);
       setBottom(p1El, pos1);
       updateProgressBars();
-      if (pos1 >= finishLine) declareWinner("Player 1");
+      if (pos1 >= finishLine) declareWinner(p1NameDisplay.textContent);
     } else if (ev.key.toLowerCase() === "l") {
       pos2 = climbWithSlip(p2El, pos2);
       setBottom(p2El, pos2);
       updateProgressBars();
-      if (pos2 >= finishLine) declareWinner("Player 2");
+      if (pos2 >= finishLine) declareWinner(p2NameDisplay.textContent);
     }
   });
 
-  // Mobile taps
-  mobileP1.addEventListener("touchstart", (e) => { e.preventDefault(); if (!gameActive) return; pos1 = climbWithSlip(p1El, pos1); setBottom(p1El,pos1); updateProgressBars(); if (pos1 >= finishLine) declareWinner("Player 1"); });
-  mobileP2.addEventListener("touchstart", (e) => { e.preventDefault(); if (!gameActive) return; pos2 = climbWithSlip(p2El, pos2); setBottom(p2El,pos2); updateProgressBars(); if (pos2 >= finishLine) declareWinner("Player 2"); });
+  // Mobile
+  mobileP1.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    if (!gameActive) return;
+    pos1 = climbWithSlip(p1El, pos1);
+    setBottom(p1El, pos1);
+    updateProgressBars();
+    if (pos1 >= finishLine) declareWinner(p1NameDisplay.textContent);
+  });
+
+  mobileP2.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    if (!gameActive) return;
+    pos2 = climbWithSlip(p2El, pos2);
+    setBottom(p2El, pos2);
+    updateProgressBars();
+    if (pos2 >= finishLine) declareWinner(p2NameDisplay.textContent);
+  });
 
   // Buttons
   startBtn.addEventListener("click", () => { resetGame(); startCountdown(); });
   restartBtn.addEventListener("click", () => { resetGame(); startCountdown(); });
 
+  // 🔹 Change Players button
+  changePlayersBtn.addEventListener("click", () => {
+    resetGame();
+    // Reset player names
+    p1NameDisplay.textContent = "Player 1";
+    p2NameDisplay.textContent = "Player 2";
+    p1NameInput.value = "";
+    p2NameInput.value = "";
+    // Show setup modal again
+    playerSetupModal.style.display = "flex";
+    // Disable Start until new names entered
+    startBtn.disabled = true;
+  });
+
+  // Player name modal submit
+  playerForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const p1Name = p1NameInput.value.trim() || "Player 1";
+    const p2Name = p2NameInput.value.trim() || "Player 2";
+
+    p1NameDisplay.textContent = p1Name;
+    p2NameDisplay.textContent = p2Name;
+
+    playerSetupModal.style.display = "none";
+    startBtn.disabled = false;
+  });
+
+  // Leaderboard button
+  leaderboardBtn.addEventListener("click", () => {
+    fetch("/leaderboard")
+      .then(res => res.json())
+      .then(data => {
+        leaderboardTable.innerHTML = "";
+        data.forEach((row, index) => {
+          leaderboardTable.innerHTML += `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${row.player_name}</td>
+              <td>${row.time}</td>
+            </tr>`;
+        });
+        leaderboardModal.style.display = "flex";
+      });
+  });
+
+  // Close leaderboard
+  closeLeaderboard.addEventListener("click", () => {
+    leaderboardModal.style.display = "none";
+  });
+
   // Init
   resetGame();
 
-  // Confetti implementation (minimal particle engine)
+  // Confetti Engine
   function initConfetti(canvas) {
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth; 
+    canvas.height = window.innerHeight;
     const ctx = canvas.getContext("2d");
     let particles = [];
     function rand(min,max){ return Math.random()*(max-min)+min; }
@@ -244,15 +332,16 @@ document.addEventListener("DOMContentLoaded", () => {
       if (particles.length === 0) { cancelAnimationFrame(animLoop); animLoop=null; }
     }
 
-    // adjust size when window resizes
-    window.addEventListener("resize", () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+    window.addEventListener("resize", () => { 
+      canvas.width = window.innerWidth; 
+      canvas.height = window.innerHeight; 
+    });
 
-    return {
-      explode
-    };
+    return { explode };
   }
 });
 
+// Trash talk
 const phrases = [
   "Haha you're weak!",
   "This game is ez 😎",
@@ -268,14 +357,11 @@ function showTrashTalk(playerId) {
   bubble.textContent = randomPhrase;
   bubble.classList.add("show");
 
-  // Hide after 2 seconds
   setTimeout(() => {
     bubble.classList.remove("show");
   }, 2000);
 }
 
-// Example triggers:
-// Player 1 talks every 5–8 seconds randomly
+// Trash talk timing
 setInterval(() => showTrashTalk(1), Math.random() * 3000 + 5000);
-// Player 2 talks every 5–8 seconds randomly
 setInterval(() => showTrashTalk(2), Math.random() * 3000 + 5000);

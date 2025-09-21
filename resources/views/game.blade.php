@@ -5,10 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Palosebo — Ultimate Bamboo Race</title>
   <link rel="stylesheet" href="{{ asset('css/game.css') }}">
+  
+  <!-- CSRF Token -->
+  <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body>
   <div id="game-root" class="game-root">
-    <!-- HUD -->
+    
+    <!-- ======= HUD ======= -->
     <header class="hud">
       <div class="player-hud">
         <div class="player-info">
@@ -16,7 +20,9 @@
           <div class="player-meta">
             <div class="player-name" id="p1Name">Player 1</div>
             <div class="progress-wrap">
-              <div class="progress-bar" id="p1Bar"><div class="progress-fill" style="width:0%"></div></div>
+              <div class="progress-bar" id="p1Bar">
+                <div class="progress-fill" style="width:0%"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -31,7 +37,9 @@
           <div class="player-meta">
             <div class="player-name" id="p2Name">Player 2</div>
             <div class="progress-wrap">
-              <div class="progress-bar" id="p2Bar"><div class="progress-fill" style="width:0%"></div></div>
+              <div class="progress-bar" id="p2Bar">
+                <div class="progress-fill" style="width:0%"></div>
+              </div>
             </div>
           </div>
           <div class="player-avatar p2">P2</div>
@@ -39,8 +47,9 @@
       </div>
     </header>
 
-    <!-- Game area -->
+    <!-- ======= Game Area ======= -->
     <main class="stage">
+      <!-- Player 1 Bamboo -->
       <div class="bamboo-column">
         <div class="flag" aria-hidden>🏁</div>
         <div class="bamboo-trunk" id="bamboo1">
@@ -54,6 +63,7 @@
         </div>
       </div>
 
+      <!-- Player 2 Bamboo -->
       <div class="bamboo-column">
         <div class="flag" aria-hidden>🏁</div>
         <div class="bamboo-trunk" id="bamboo2">
@@ -68,19 +78,21 @@
       </div>
     </main>
 
-    <!-- Controls -->
+    <!-- ======= Controls ======= -->
     <div class="controls">
-      <button id="startBtn" class="btn start">Start</button>
+      <button id="changePlayersBtn" class="btn">Change Players</button>
+      <button id="startBtn" class="btn start" disabled>Start</button>
       <button id="restartBtn" class="btn restart" style="display:none">Restart</button>
+      <button id="leaderboardBtn" class="btn">Leaderboard</button>
     </div>
 
-    <!-- Mobile taps -->
+    <!-- ======= Mobile Tap Controls ======= -->
     <div class="mobile-controls">
       <button id="mobileP1" class="tap left">Tap P1</button>
       <button id="mobileP2" class="tap right">Tap P2</button>
     </div>
 
-    <!-- Overlay countdown & winner -->
+    <!-- ======= Overlay Countdown & Winner ======= -->
     <div id="overlay" class="overlay" style="display:none">
       <div id="countdown" class="countdown">3</div>
       <div id="winnerPopup" class="winner" style="display:none">
@@ -89,10 +101,50 @@
       </div>
     </div>
 
-    <!-- Confetti canvas -->
+    <!-- ======= Confetti Canvas ======= -->
     <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
   </div>
 
+  <!-- ======= Player Name Modal ======= -->
+  <div id="playerSetupModal" class="modal-overlay">
+    <div class="modal-content">
+      <h2>Enter Player Names</h2>
+      <form id="playerForm">
+        @csrf
+        <div class="form-group">
+          <label for="player1NameInput">Player 1:</label>
+          <input type="text" id="player1NameInput" name="player1Name" placeholder="Enter Player 1 Name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="player2NameInput">Player 2:</label>
+          <input type="text" id="player2NameInput" name="player2Name" placeholder="Enter Player 2 Name" required>
+        </div>
+
+        <button type="submit" class="btn start full-width">Start Game</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======= Leaderboard Modal ======= -->
+  <div id="leaderboardModal" class="modal-overlay" style="display:none">
+    <div class="modal-content">
+      <h2>Leaderboard</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Time (s)</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardTable"></tbody>
+      </table>
+      <button id="closeLeaderboard" class="btn">Close</button>
+    </div>
+  </div>
+
+  <!-- ======= JS ======= -->
   <script src="{{ asset('js/game.js') }}"></script>
 </body>
 </html>
