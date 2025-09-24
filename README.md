@@ -1,4 +1,4 @@
-# Racing Game with Leaderboard
+# Palosebo with Leaderboard
 
 A simple 2-player racing game built with **Laravel (PHP/MySQL)**, **HTML**, **CSS**, and **JavaScript**.  
 Players can enter their names, race against each other, and the fastest finish times are saved to a **leaderboard**.
